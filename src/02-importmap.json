@@ -1,0 +1,5 @@
+{ "imports": {
+    "three": "data:text/javascript;base64,OMITTED-01-1.62MB-see-INLINE-ASSETS-md",
+    "three/addons/loaders/GLTFLoader.js": "data:text/javascript;base64,OMITTED-02-0.14MB-see-INLINE-ASSETS-md",
+    "three/addons/utils/BufferGeometryUtils.js": "data:text/javascript;base64,OMITTED-03-0.04MB-see-INLINE-ASSETS-md"
+} }

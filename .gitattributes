@@ -1,0 +1,6 @@
+# 这几个 HTML 是构建产物（内联了约 37.5MB 的 three.js / GLB / 音频 base64）。
+# 标记为 generated 后，GitHub 的语言统计与搜索会以 src/、js/ 里的真实源码为主，
+# 也避免超大文件在 diff 里刷屏。不影响文件本身，玩法与运行方式完全不变。
+playable.html linguist-generated
+playable-beta.html linguist-generated
+docs/playable.html linguist-generated

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<script>
+/* → src/01-boot.js */
+</script>
+<script type="importmap">
+/* → src/02-importmap.json */
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>胡艺凡快跑 3D</title>
+<style>
+/* → src/style.css */
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="grade"></div>
+
+<div id="hud" class="hidden">
+    <div>
+        <div id="hudScore">0</div>
+        <div id="coinBox">🪙 <span id="hudCoins">0</span></div>
+        <div id="reviveBox" class="hidden">💖 <span id="hudRevive">0</span></div>
+    </div>
+    <div class="small">
+        <div id="hudScene">湖畔轨道</div>
+        <div>最高分 <span id="hudBest">0</span></div>
+        <div id="hudDist">0 m</div>
+    </div>
+</div>
+<div id="powers"></div>
+<div id="msg"></div>
+<div id="turnHint" class="hidden"><span class="ar">⬅</span><span class="tx">左转</span></div>
+<div id="fade"></div>
+<div id="reviveFlash"></div>
+<button id="pauseBtn" class="hidden">⏸</button>
+<button id="volBtn" title="音量（M 静音）">🔊</button>
+
+<div id="volume" class="overlay hidden">
+    <div id="volPanel">
+        <div class="upHead"><h2>⚙️ 设置</h2></div>
+        <div class="upTip">音量与画质都在这里；手机建议选中/低档，帧率更稳</div>
+        <div class="volRow">
+            <span class="lbl"><i>🎚️</i>总音量</span>
+            <input type="range" id="volMaster" min="0" max="100" step="1" value="80">
+            <span class="val" id="volMasterVal">80%</span>
+        </div>
+        <div class="volRow">
+            <span class="lbl"><i>🎮</i>音效</span>
+            <input type="range" id="volSfx" min="0" max="100" step="1" value="85">
+            <span class="val" id="volSfxVal">85%</span>
+        </div>
+        <div class="volRow">
+            <span class="lbl"><i>😂</i>保安笑声</span>
+            <input type="range" id="volLaugh" min="0" max="100" step="1" value="80">
+            <span class="val" id="volLaughVal">80%</span>
+        </div>
+        <div class="volRow">
+            <span class="lbl"><i>🎵</i>背景音乐</span>
+            <input type="range" id="volMusic" min="0" max="100" step="1" value="55">
+            <span class="val" id="volMusicVal">55%</span>
+        </div>
+        <div class="volRow" id="qRow">
+            <span class="lbl"><i>🎚️</i>画质</span>
+            <div class="qBtns">
+                <button class="qBtn" data-q="low">低</button>
+                <button class="qBtn" data-q="mid">中</button>
+                <button class="qBtn" data-q="high">高</button>
+            </div>
+        </div>
+        <div class="volTip" id="qTip"></div>
+        <div class="volRow" id="fvRow">
+            <span class="lbl"><i>🎬</i>终点镜头</span>
+            <div class="qBtns">
+                <button class="qBtn" data-fv="character">人物视角</button>
+                <button class="qBtn" data-fv="drone">全景视角</button>
+            </div>
+        </div>
+        <div class="volTip" id="fvTip"></div>
+        <div class="volBtns">
+            <button class="btn" id="volMute">🔇 静音</button>
+            <button class="btn btnAlt" id="volBack">返回</button>
+        </div>
+        <div class="volTip">快捷键：M 静音 / Esc 返回</div>
+    </div>
+</div>
+
+<div id="loading" class="overlay"><div class="sub">正在加载 3D 引擎…</div></div>
+
+<div id="menu" class="overlay hidden">
+    <h1 id="title"></h1>
+    <div class="sub" id="subtitle"></div>
+    <div class="keys">
+        <span>← → / A D</span><span>左右换道</span>
+        <span>↑ / W / 空格</span><span>跳跃（↓ 在空中可快速落地）</span>
+        <span>↓ / S</span><span>翻滚（钻过高栏杆）</span>
+        <span>P / Esc</span><span>暂停</span>
+        <span>手机</span><span>上下左右滑动屏幕</span>
+    </div>
+    <div class="sub" id="menuBest"></div>
+    <div class="sub" id="menuBank"></div>
+    <!-- PKVS:MENU -->
+    <div class="btnRow">
+        <button class="btn" id="startBtn">开始奔跑</button>
+        <button class="btn" id="vsBtn">⚔️ 双人对战</button>
+    </div>
+    <!-- /PKVS:MENU -->
+    <button class="btn btnAlt" id="upOpenBtn">🛠️ 道具升级</button>
+</div>
+
+<div id="pause" class="overlay hidden">
+    <h1>暂停</h1>
+    <button class="btn" id="resumeBtn">继续</button>
+</div>
+
+<div id="over" class="overlay hidden">
+    <h1 id="overTitle">被抓住了！</h1>
+    <div class="stat">得分 <b id="overScore">0</b></div>
+    <div class="stat">金币 <b id="overCoins">0</b></div>
+    <div class="stat">距离 <b id="overDist">0</b> m</div>
+    <div class="stat" id="overRevive"></div>
+    <div class="stat" id="overBest"></div>
+    <div class="stat" id="overBank"></div>
+    <button class="btn" id="restartBtn">再来一局</button>
+    <button class="btn btnAlt" id="upOpenBtn2">🛠️ 道具升级</button>
+</div>
+
+<div id="upgrades" class="overlay hidden">
+    <div id="upPanel">
+        <div class="upHead">
+            <h2>✨ 道具升级</h2>
+            <div id="upBank" class="upBank">🪙 0</div>
+        </div>
+        <div class="upTip">每升 1 级，道具持续时间 +1 秒 · 升级价格每次翻倍 · 最高 10 级（Esc 返回）</div>
+        <div id="upCards"></div>
+        <button class="btn upBack" id="upBack">返回</button>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- PKVS:LIBS -->
+<!-- PKVS 传输层：WebRTC P2P / 手动信令 / 时钟同步 -->
+<script>
+/* → src/03-pkvs-core.js */
+</script>
+<!-- PKVS 对战大厅：身份 / 三步向导 / 备战 / HUD / 结算 -->
+<script>
+/* → src/04-pkvs-lobby-ui.js */
+</script>
+<!-- /PKVS:LIBS -->
+<!-- PKVS:ITEMS -->
+<script>
+/* → src/05-pkvs-items.js */
+</script>
+<!-- /PKVS:ITEMS -->
+<!-- PKVS:APP -->
+<script>
+/* → src/06-pkvs-integration.js */
+</script>
+<!-- /PKVS:APP -->
+<script type="module">
+/* → src/game.module.js */
+</script>
+</body>
+</html>
