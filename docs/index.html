@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>湖畔跑酷 3D · 单文件网页跑酷游戏</title>
+<meta name="description" content="一个完全离线、双击即玩的 Three.js 3D 跑酷游戏。单文件 HTML，含内联模型与 three.js。">
+<style>
+  :root{
+    --bg:#080c17; --bg2:#0d1426; --card:#121b30;
+    --line:rgba(120,160,255,.14); --txt:#e8eefc; --dim:#93a3c4;
+    --cyan:#4fe3d0; --blue:#5b8cff; --pink:#c46bff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--txt);
+    font-family:"PingFang SC","Microsoft YaHei","Segoe UI",system-ui,-apple-system,sans-serif;
+    line-height:1.7; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+  /* ---------- hero ---------- */
+  .hero{
+    position:relative; overflow:hidden; text-align:center;
+    padding:104px 24px 88px;
+    background:
+      radial-gradient(900px 420px at 50% -10%,rgba(91,140,255,.22),transparent 70%),
+      radial-gradient(600px 340px at 88% 12%,rgba(196,107,255,.13),transparent 70%),
+      linear-gradient(180deg,var(--bg2),var(--bg));
+    border-bottom:1px solid var(--line);
+  }
+  .hero::after{
+    content:""; position:absolute; inset:auto 0 0 0; height:1px;
+    background:linear-gradient(90deg,transparent,var(--cyan),transparent); opacity:.5;
+  }
+  .eyebrow{
+    display:inline-block; font-size:12px; letter-spacing:.22em; color:var(--cyan);
+    border:1px solid rgba(79,227,208,.3); border-radius:99px;
+    padding:6px 16px; margin-bottom:28px; background:rgba(79,227,208,.06);
+  }
+  h1{
+    font-size:clamp(40px,7vw,76px); line-height:1.12; letter-spacing:-.02em;
+    font-weight:800;
+    background:linear-gradient(100deg,#fff 8%,var(--cyan) 45%,var(--blue) 72%,var(--pink));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    margin-bottom:20px;
+  }
+  .sub{font-size:clamp(15px,2.2vw,19px);color:var(--dim);max-width:620px;margin:0 auto 14px}
+  .tip{font-size:13px;color:#6f80a3;margin-bottom:40px}
+  .btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .btn{
+    display:inline-flex;align-items:center;gap:9px;
+    padding:15px 34px;border-radius:12px;font-size:16px;font-weight:700;
+    transition:transform .18s ease,box-shadow .18s ease,background .18s ease;
+  }
+  .btn:hover{transform:translateY(-2px)}
+  .btn-primary{
+    background:linear-gradient(100deg,var(--cyan),var(--blue));color:#06121f;
+    box-shadow:0 10px 34px rgba(79,227,208,.24);
+  }
+  .btn-primary:hover{box-shadow:0 14px 42px rgba(79,227,208,.38)}
+  .btn-ghost{background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--txt)}
+  .btn-ghost:hover{background:rgba(255,255,255,.09)}
+  .tags{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-top:34px}
+  .tag{font-size:12px;color:var(--dim);border:1px solid var(--line);border-radius:7px;padding:5px 12px;background:rgba(255,255,255,.025)}
+
+  /* ---------- sections ---------- */
+  section{padding:72px 0}
+  h2{font-size:26px;font-weight:700;margin-bottom:10px;letter-spacing:-.01em}
+  .lead{color:var(--dim);font-size:15px;margin-bottom:32px;max-width:680px}
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px;
+  }
+  .card h3{font-size:16px;margin-bottom:9px;color:var(--cyan)}
+  .card p{font-size:14px;color:var(--dim)}
+  .shots{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+  .shot{
+    position:relative;overflow:hidden;border-radius:12px;border:1px solid var(--line);
+    background:#0b1222;aspect-ratio:16/10;
+  }
+  .shot img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s ease}
+  .shot:hover img{transform:scale(1.045)}
+  .shot span{
+    position:absolute;left:0;right:0;bottom:0;padding:24px 14px 10px;
+    font-size:12px;color:#e8eefc;
+    background:linear-gradient(transparent,rgba(4,8,18,.85));
+  }
+  code{
+    background:rgba(91,140,255,.12);border:1px solid var(--line);border-radius:5px;
+    padding:2px 7px;font-size:13px;color:#a8c6ff;
+    font-family:"Cascadia Code",Consolas,monospace;
+  }
+  pre{
+    background:#0b1222;border:1px solid var(--line);border-radius:12px;
+    padding:20px;overflow-x:auto;font-size:13px;color:#a8c6ff;line-height:1.9;
+  }
+  ul{list-style:none;display:grid;gap:11px}
+  li{padding-left:20px;position:relative;color:var(--dim);font-size:14px}
+  li::before{content:"";position:absolute;left:2px;top:11px;width:6px;height:6px;border-radius:50%;background:var(--cyan)}
+  li b{color:var(--txt);font-weight:600}
+  footer{
+    border-top:1px solid var(--line);padding:32px 0 46px;
+    color:#6f80a3;font-size:13px;text-align:center;
+  }
+  footer a{color:var(--cyan)}
+  @media(max-width:600px){
+    .hero{padding:72px 20px 64px}
+    .btn{width:100%;justify-content:center}
+    section{padding:52px 0}
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="eyebrow">THREE.JS · 单文件 · 完全离线</div>
+  <h1>湖畔跑酷 3D</h1>
+  <p class="sub">类似地铁跑酷的 3D 网页跑酷游戏。五张地图轮转、天气交替、地标建模、双人对战 —— 全部塞进一个 HTML 文件里。</p>
+  <p class="tip">首次打开约需加载 38 MB，请稍等几秒；建议 Chrome / Edge 89+ 或 Safari 16.4+</p>
+  <div class="btns">
+    <a class="btn btn-primary" href="playable.html">▶ 开始游戏</a>
+    <a class="btn btn-ghost" href="https://github.com/1yanjinhui8/lakeside-parkour-3d/blob/main/playable-beta.html">🧪 内测版（下载后双击）</a>
+  </div>
+  <div class="tags">
+    <span class="tag">无需安装</span>
+    <span class="tag">无需联网</span>
+    <span class="tag">模型与 three.js 已内联</span>
+    <span class="tag">支持手机低画质模式</span>
+    <span class="tag">双人对战</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section>
+    <h2>游戏画面</h2>
+    <p class="lead">2026-11-06 最新一轮美术：群山、护城河、隧道与校园地标。</p>
+    <div class="shots">
+      <div class="shot"><img src="screenshots/20261106_群山_陡峭版全景.png" alt="群山全景" loading="lazy"><span>群山 · 陡峭版全景</span></div>
+      <div class="shot"><img src="screenshots/20261106_湖畔_护城河修复后.png" alt="湖畔护城河" loading="lazy"><span>湖畔 · 护城河</span></div>
+      <div class="shot"><img src="screenshots/20261106_群山_夜景.png" alt="群山夜景" loading="lazy"><span>群山 · 夜景</span></div>
+      <div class="shot"><img src="screenshots/20261106_城门局部.png" alt="城门局部" loading="lazy"><span>城门 · 局部</span></div>
+      <div class="shot"><img src="screenshots/20261106_隧道_随机洞长.png" alt="隧道" loading="lazy"><span>隧道 · 随机洞长</span></div>
+      <div class="shot"><img src="screenshots/20261106_群山_树冠特写.png" alt="树冠特写" loading="lazy"><span>群山 · 树冠特写</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>这个项目的特别之处</h2>
+    <p class="lead">不是「一个网页 + 一堆资源」，而是真的把所有东西编译进了一个文件。</p>
+    <div class="grid">
+      <div class="card">
+        <h3>单文件 · 可离线</h3>
+        <p>7 座地标 GLB、角色、保安、校园底板以及 three.js 本身全部内联。<code>file://</code> 双击直接跑，断网、没服务器都不影响。</p>
+      </div>
+      <div class="card">
+        <h3>压缩过的模型</h3>
+        <p>校园底板改用 <code>gzip + base64</code>，运行时用浏览器原生 <code>DecompressionStream</code> 解压再交给 GLTFLoader，16.7 MB 压到 3.8 MB。</p>
+      </div>
+      <div class="card">
+        <h3>画质与兼容性</h3>
+        <p>按设备性能自动降级，也能用 <code>?q=low</code> 强制低画质。浏览器不支持 importmap 时会显示中文提示，而不是白屏。</p>
+      </div>
+      <div class="card">
+        <h3>自带测试与工具链</h3>
+        <p><code>tests/</code> 51 项自检，<code>tools/</code> 里有内联打包、生成内测版、截图、性能采集等全套脚本，README 是完整的开发日志。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>本地运行</h2>
+    <p class="lead">最简单的方式：把仓库 clone 下来，双击 <code>playable.html</code>。</p>
+    <pre>git clone https://github.com/1yanjinhui8/lakeside-parkour-3d.git
+cd lakeside-parkour-3d
+start playable.html          # Windows
+# 或者 npm start 起一个本地静态服务器（默认 8765 端口）</pre>
+    <ul style="margin-top:24px">
+      <li><b>正式版</b>：每 3000 米换一张地图，撞车 / 支撑柱 / 保安都会死。</li>
+      <li><b>内测版</b>：每 500 米换图、人物无敌，适合快速验收美术；从仓库下载 <code>playable-beta.html</code> 后双击运行。双人对战时会自动恢复死亡判定。</li>
+      <li><b>浏览器要求</b>：Chrome / Edge 89+、Safari 16.4+；微信 / QQ 内置浏览器请用「在浏览器打开」。</li>
+      <li><b>手机嫌卡</b>：网址后加 <code>?q=low</code>，或在 ⚙️ 设置面板里切低画质。</li>
+    </ul>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>湖畔跑酷 3D · 基于 Three.js · 完整开发记录见 <a href="https://github.com/1yanjinhui8/lakeside-parkour-3d#readme">README</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
