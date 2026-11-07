@@ -1,0 +1,11 @@
+{
+  "name": "lakeside-parkour-3d",
+  "version": "1.1.0",
+  "private": true,
+  "description": "湖畔跑酷 3D —— 单文件 Three.js 跑酷游戏（含动画状态机、飞行器、自动化测试）",
+  "scripts": {
+    "test": "node tests/game.test.mjs",
+    "start": "node _srv.js",
+    "shots": "powershell -ExecutionPolicy Bypass -File tools/shots.ps1"
+  }
+}

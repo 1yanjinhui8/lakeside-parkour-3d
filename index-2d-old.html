@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>纵向跑酷游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(180deg, #87CEEB 0%, #98D8E8 100%);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            background: #f0f0f0;
+            border: 3px solid #333;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        #score {
+            float: left;
+        }
+
+        #distance {
+            float: right;
+        }
+
+        #startScreen, #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 100;
+        }
+
+        #startScreen h1, #gameOverScreen h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        #startScreen p, #gameOverScreen p {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 20px;
+            background: #FF1493;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: scale(1.1);
+            background: #FF69B4;
+        }
+
+        .controls {
+            margin-top: 20px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="ui">
+            <div id="score">分数: 0</div>
+            <div id="distance">距离: 0m</div>
+        </div>
+
+        <div id="startScreen">
+            <h1>🏃 纵向跑酷</h1>
+            <p>使用 ← → 键左右移动</p>
+            <p>按 ↑ 或 空格 跳跃</p>
+            <p>按 ↓ 翻滚</p>
+            <button onclick="startGame()">开始游戏</button>
+        </div>
+
+        <div id="gameOverScreen" class="hidden">
+            <h1>游戏结束</h1>
+            <p id="finalScore">分数: 0</p>
+            <p id="finalDistance">距离: 0m</p>
+            <button onclick="restartGame()">重新开始</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 400;
+        canvas.height = 600;
+
+        // 游戏状态
+        let gameState = 'start'; // start, playing, gameOver
+        let score = 0;
+        let distance = 0;
+        let gameSpeed = 3;
+
+        // 车道设置
+        const lanes = [100, 200, 300]; // 三个车道的X坐标
+        let currentLane = 1; // 当前在中间车道
+
+        // 玩家对象
+        const player = {
+            x: lanes[currentLane],
+            y: 450,
+            width: 50,
+            height: 70,
+            velocityY: 0,
+            isJumping: false,
+            isRolling: false,
+            rollTimer: 0,
+            targetX: lanes[currentLane]
+        };
+
+        // 障碍物数组
+        let obstacles = [];
+        let obstacleTimer = 0;
+
+        // 背景滚动
+        let bgOffset = 0;
+
+        // 键盘控制
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+
+            if (gameState === 'playing') {
+                // 左右移动
+                if (e.key === 'ArrowLeft' && currentLane > 0) {
+                    currentLane--;
+                    player.targetX = lanes[currentLane];
+                }
+                if (e.key === 'ArrowRight' && currentLane < lanes.length - 1) {
+                    currentLane++;
+                    player.targetX = lanes[currentLane];
+                }
+
+                // 跳跃
+                if ((e.key === 'ArrowUp' || e.key === ' ') && !player.isJumping && !player.isRolling) {
+                    player.isJumping = true;
+                    player.velocityY = -12;
+                }
+
+                // 翻滚
+                if (e.key === 'ArrowDown' && !player.isJumping && !player.isRolling) {
+                    player.isRolling = true;
+                    player.rollTimer = 20; // 翻滚持续帧数
+                    player.height = 40; // 降低高度
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // 开始游戏
+        function startGame() {
+            document.getElementById('startScreen').classList.add('hidden');
+            gameState = 'playing';
+            score = 0;
+            distance = 0;
+            gameSpeed = 3;
+            obstacles = [];
+            currentLane = 1;
+            player.x = lanes[currentLane];
+            player.targetX = lanes[currentLane];
+            player.y = 450;
+            player.velocityY = 0;
+            player.isJumping = false;
+            player.isRolling = false;
+            gameLoop();
+        }
+
+        // 重新开始
+        function restartGame() {
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            startGame();
+        }
+
+        // 生成障碍物
+        function spawnObstacle() {
+            const lane = lanes[Math.floor(Math.random() * lanes.length)];
+            const types = ['box', 'barrier', 'low'];
+            const type = types[Math.floor(Math.random() * types.length)];
+
+            obstacles.push({
+                x: lane,
+                y: -50,
+                width: 40,
+                height: type === 'low' ? 30 : 60,
+                type: type,
+                passed: false
+            });
+        }
+
+        // 更新游戏
+        function update() {
+            if (gameState !== 'playing') return;
+
+            // 更新分数和距离
+            score += 1;
+            distance = Math.floor(score / 10);
+
+            // 速度逐渐增加
+            if (score % 500 === 0) {
+                gameSpeed += 0.3;
+            }
+
+            // 背景滚动
+            bgOffset += gameSpeed;
+            if (bgOffset > 50) bgOffset = 0;
+
+            // 玩家平滑移动
+            player.x += (player.targetX - player.x) * 0.2;
+
+            // 跳跃物理
+            if (player.isJumping) {
+                player.velocityY += 0.6; // 重力
+                player.y += player.velocityY;
+
+                if (player.y >= 450) {
+                    player.y = 450;
+                    player.isJumping = false;
+                    player.velocityY = 0;
+                }
+            }
+
+            // 翻滚计时
+            if (player.isRolling) {
+                player.rollTimer--;
+                if (player.rollTimer <= 0) {
+                    player.isRolling = false;
+                    player.height = 70;
+                }
+            }
+
+            // 生成障碍物
+            obstacleTimer++;
+            if (obstacleTimer > 60 - gameSpeed * 2) {
+                spawnObstacle();
+                obstacleTimer = 0;
+            }
+
+            // 更新障碍物
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].y += gameSpeed;
+
+                // 碰撞检测
+                if (!obstacles[i].passed &&
+                    checkCollision(player, obstacles[i])) {
+                    gameOver();
+                }
+
+                // 标记已通过的障碍物（加分）
+                if (!obstacles[i].passed && obstacles[i].y > player.y + player.height) {
+                    obstacles[i].passed = true;
+                    score += 10;
+                }
+
+                // 移除屏幕外的障碍物
+                if (obstacles[i].y > canvas.height) {
+                    obstacles.splice(i, 1);
+                }
+            }
+        }
+
+        // 碰撞检测
+        function checkCollision(player, obstacle) {
+            // 跳过低障碍物时通过
+            if (obstacle.type === 'low' && player.isJumping && player.y < 400) {
+                return false;
+            }
+            // 翻滚通过高障碍物
+            if (obstacle.type !== 'low' && player.isRolling) {
+                return false;
+            }
+
+            return (
+                Math.abs(player.x - obstacle.x) < (player.width + obstacle.width) / 2 &&
+                player.y < obstacle.y + obstacle.height &&
+                player.y + player.height > obstacle.y
+            );
+        }
+
+        // 绘制游戏
+        function draw() {
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制背景道路
+            ctx.fillStyle = '#4A4A4A';
+            ctx.fillRect(50, 0, 300, canvas.height);
+
+            // 绘制道路标线
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([20, 20]);
+            ctx.lineDashOffset = -bgOffset;
+
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.moveTo(lanes[i] + 25, 0);
+                ctx.lineTo(lanes[i] + 25, canvas.height);
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
+
+            // 绘制障碍物
+            obstacles.forEach(obs => {
+                if (obs.type === 'box') {
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(obs.x - obs.width/2, obs.y, obs.width, obs.height);
+                    ctx.strokeStyle = '#5C2E0F';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(obs.x - obs.width/2, obs.y, obs.width, obs.height);
+                } else if (obs.type === 'barrier') {
+                    ctx.fillStyle = '#FF4444';
+                    ctx.fillRect(obs.x - obs.width/2, obs.y, obs.width, obs.height);
+                    ctx.fillStyle = '#FFFFFF';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(obs.x - obs.width/2 + 5, obs.y + i * 20, obs.width - 10, 8);
+                    }
+                } else if (obs.type === 'low') {
+                    ctx.fillStyle = '#FFD700';
+                    ctx.fillRect(obs.x - obs.width/2, obs.y, obs.width, obs.height);
+                    ctx.fillStyle = '#FFA500';
+                    ctx.fillRect(obs.x - obs.width/2 + 5, obs.y + 5, obs.width - 10, obs.height - 10);
+                }
+            });
+
+            // 绘制玩家（占位符 - 稍后替换为真实照片）
+            ctx.save();
+            ctx.translate(player.x, player.y + player.height/2);
+
+            if (player.isRolling) {
+                ctx.rotate((score * 0.5) % (Math.PI * 2));
+            }
+
+            // 身体（粉色外套）
+            ctx.fillStyle = '#FF1493';
+            ctx.fillRect(-player.width/2, -player.height/2, player.width, player.height * 0.6);
+
+            // 裤子（黑色）
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(-player.width/2, -player.height/2 + player.height * 0.6, player.width, player.height * 0.4);
+
+            // 头部
+            ctx.fillStyle = '#FFE4C4';
+            ctx.beginPath();
+            ctx.arc(0, -player.height/2 - 10, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 头发
+            ctx.fillStyle = '#2C1810';
+            ctx.beginPath();
+            ctx.arc(0, -player.height/2 - 15, 12, Math.PI, 0);
+            ctx.fill();
+
+            ctx.restore();
+
+            // 更新UI
+            document.getElementById('score').textContent = `分数: ${score}`;
+            document.getElementById('distance').textContent = `距离: ${distance}m`;
+        }
+
+        // 游戏结束
+        function gameOver() {
+            gameState = 'gameOver';
+            document.getElementById('finalScore').textContent = `分数: ${score}`;
+            document.getElementById('finalDistance').textContent = `距离: ${distance}m`;
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+        }
+
+        // 游戏主循环
+        function gameLoop() {
+            if (gameState === 'playing') {
+                update();
+                draw();
+                requestAnimationFrame(gameLoop);
+            }
+        }
+    </script>
+</body>
+</html>
