@@ -34,3 +34,13 @@ python tools/extract-src.py
 
 脚本只读 `playable.html`，重新生成整个 `src/`，不会影响成品。
 分工上，`tools/` 里其它脚本负责**构建**成品，这个脚本负责**展示**源码。
+
+## 在线版为什么和成品不一样
+
+`docs/playable.html` 是给手机 / 在线访问用的**加载优化版**：把内联的 14 个
+模型与音频外置成 `docs/game-assets/` 下的独立文件，JS module 从 36MB 降到
+0.6MB，资源并行下载并走 HTTP 缓存，加载期间有进度提示。游戏逻辑与成品
+逐字一致，只有资源 URL 和 `resolvePlate()` 的解压来源不同。
+
+根目录 `playable.html` 仍是内联全部资源的单文件成品，供电脑下载双击运行。
+优化版由 `python tools/build-pages.py` 生成，详见 `docs/game-assets/README.md`。
